@@ -57,7 +57,7 @@ class TestApplicationEngine(
         return call
     }
 
-    fun handleWebSocket(uri: String, setup: TestApplicationRequest.() -> Unit): TestApplicationCall {
+    suspend fun handleWebSocket(uri: String, setup: TestApplicationRequest.() -> Unit): TestApplicationCall {
         val call = createCall {
             this.uri = uri
             addHeader(HttpHeaders.Connection, "Upgrade")
@@ -67,14 +67,12 @@ class TestApplicationEngine(
             setup()
         }
 
-        runBlocking(configuration.dispatcher) {
-            pipeline.execute(call)
-        }
+        pipeline.execute(call)
 
         return call
     }
 
-    fun handleWebSocketConversation(
+    suspend fun handleWebSocketConversation(
             uri: String, setup: TestApplicationRequest.() -> Unit = {},
             callback: suspend TestApplicationCall.(incoming: ReceiveChannel<Frame>, outgoing: SendChannel<Frame>) -> Unit
     ): TestApplicationCall {
@@ -92,12 +90,10 @@ class TestApplicationEngine(
                 call.response.websocketChannel()!!, { Int.MAX_VALUE.toLong() }, job, engineContext, pool
         )
 
-        runBlocking(configuration.dispatcher) {
-            call.callback(reader.incoming, writer.outgoing)
-            writer.flush()
-            writer.close()
-            job.cancelAndJoin()
-        }
+        call.callback(reader.incoming, writer.outgoing)
+        writer.flush()
+        writer.close()
+        job.cancelAndJoin()
         return call
     }
 

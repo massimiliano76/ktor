@@ -4,6 +4,7 @@ import io.ktor.application.*
 import io.ktor.config.*
 import io.ktor.http.*
 import io.ktor.server.engine.*
+import kotlinx.coroutines.experimental.*
 import org.slf4j.*
 import java.util.concurrent.*
 
@@ -35,6 +36,10 @@ fun <R> withApplication(
     } finally {
         engine.stop(0L, 0L, TimeUnit.MILLISECONDS)
     }
+}
+
+fun <R> withTestApplicationSuspend(test: suspend TestApplicationEngine.() -> R): R {
+    return withApplication(createTestEnvironment(), test = { runBlocking { test() } })
 }
 
 fun <R> withTestApplication(test: TestApplicationEngine.() -> R): R {
