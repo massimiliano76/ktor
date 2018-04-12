@@ -309,8 +309,8 @@ class WebSocketTest {
         withTestApplicationSuspend {
             application.install(WebSockets)
 
-            val log1 = arrayListOf<String>()
-            val log2 = arrayListOf<String>()
+            val log1 = hashSetOf<String>()
+            val log2 = hashSetOf<String>()
             application.routing {
 
                 class ChatSession(val session: WebSocketSession, val id: Int) : WebSocketSession by session {
@@ -322,8 +322,8 @@ class WebSocketTest {
                     val sessions = arrayListOf<ChatSession>()
 
                     suspend fun broadcast(s: String) {
-                        for (session in synchronized(this) { sessions }) {
-                            synchronized(this) { session.outgoing.send(Frame.Text(s)) }
+                        for (session in synchronized(this) { sessions.toList() }) {
+                            session.outgoing.send(Frame.Text(s))
                         }
                     }
 
@@ -358,26 +358,26 @@ class WebSocketTest {
             }
 
             handleWebSocketConversation("/chat") { incoming1, outgoing1 ->
+                log1 += "[1]" + (incoming1.receive() as Frame.Text).readText()
                 handleWebSocketConversation("/chat") { incoming2, outgoing2 ->
                     outgoing1.send(Frame.Text("HELLO"))
                     outgoing2.send(Frame.Text("HI"))
-                    for (n in 0 until 4) log1 += "[1]" + (incoming1.receive() as Frame.Text).readText()
-                    for (n in 0 until 4) log2 += "[2]" + (incoming2.receive() as Frame.Text).readText()
+                    for (n in 0 until 3) log1 += "[1]" + (incoming1.receive() as Frame.Text).readText()
+                    for (n in 0 until 3) log2 += "[2]" + (incoming2.receive() as Frame.Text).readText()
                 }
             }
 
-            assertEquals(listOf(
+            assertEquals(setOf(
                 "[1]User user0 joined.",
                 "[1]User user1 joined.",
-                "[1]user0 said 'HI'",
-                "[1]user1 said 'HELLO'"
+                "[1]user0 said 'HELLO'",
+                "[1]user1 said 'HI'"
             ), log1)
 
-            assertEquals(listOf(
-                "[2]User user0 joined.",
+            assertEquals(setOf(
                 "[2]User user1 joined.",
-                "[2]user0 said 'HI'",
-                "[2]user1 said 'HELLO'"
+                "[2]user0 said 'HELLO'",
+                "[2]user1 said 'HI'"
             ), log2)
         }
     }
